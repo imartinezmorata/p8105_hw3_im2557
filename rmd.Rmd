@@ -2,29 +2,103 @@
 title: "hw3"
 author: 'IRENE MARTINEZ MORATA (UNI: im2557)'
 date: "10/14/2021"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(p8105.datasets)
 ```
 
-## R Markdown
+## Problem 1
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+There are 134 aisles in instacart
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+```{r load the data}
+data("instacart")
+
+instacart %>% 
+  group_by(order_id) %>% 
+  summarize(n = n())
+
+instacart %>%
+  group_by(product_id) %>%
+  summarize(n = n())
+
+instacart %>% 
+  group_by(order_id) %>% 
+  summarize( n_product = n_distinct(product_id))
+
+instacart %>%
+  group_by(user_id) %>%
+  summarize(n = n())
+
+
+
+
+
 ```
 
-## Including Plots
+How many aisles are there, and which aisles are the most items ordered from?
 
-You can also embed plots, for example:
+```{r problem 1 questions}
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+instacart %>%
+  group_by(aisle) %>%
+summarize(n = n()) %>%
+arrange(desc(n))
+  
+  
+instacart %>% 
+  group_by(aisle_id, add_to_cart_order) %>% 
+  count()
+```
+Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+
+```{r }
+plot1 <- instacart %>% 
+  group_by(product_id, aisle) %>% 
+  summarize(n = n()) %>%
+  mutate(product_n = n >= 1000) %>% 
+  filter(product_n == TRUE) %>%
+  mutate(aisle = reorder(aisle, desc(n))) %>%
+   ggplot(
+       aes(x = aisle, y = n)) +
+  geom_point() +
+  labs(
+    x = "aisle",
+    y = "number of items"
+  )  +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(plot1)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+
+
+```{r }
+
+instacart %>% 
+  group_by(aisle, product_name) %>% 
+  summarize(n = n()) %>% 
+  filter(aisle == "baking ingredients" | aisle == "dog food care" | aisle == "package vegetables fruits") %>% 
+  mutate(n_ranking = min_rank(desc(n)))
+pivot_wider(
+    names_from = aisle,
+    values_from = product_name
+  ) 
+  
+  mutate(n_ranking = min_rank(desc(n))) 
+  
+  select(aisle, product_name) %>% 
+  pivot_wider(
+    names_from = aisle,
+    values_from = product_name
+  )
+
+```
