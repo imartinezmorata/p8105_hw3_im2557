@@ -15,7 +15,7 @@ library(p8105.datasets)
 
 ## Problem 1
 
-There are 134 aisles in instacart
+There are 134 aisles in instacart.
 
 
 ```{r load the data}
@@ -37,10 +37,6 @@ instacart %>%
   group_by(user_id) %>%
   summarize(n = n())
 
-
-
-
-
 ```
 
 How many aisles are there, and which aisles are the most items ordered from?
@@ -59,7 +55,7 @@ instacart %>%
 ```
 Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
 
-```{r }
+```{r } 
 plot1 <- instacart %>% 
   group_by(product_id, aisle) %>% 
   summarize(n = n()) %>%
@@ -75,7 +71,8 @@ plot1 <- instacart %>%
   )  +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 print(plot1)
-
+ 
+#note: 10,000 items
 ```
 
 Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
@@ -86,19 +83,162 @@ Make a table showing the three most popular items in each of the aisles “bakin
 instacart %>% 
   group_by(aisle, product_name) %>% 
   summarize(n = n()) %>% 
-  filter(aisle == "baking ingredients" | aisle == "dog food care" | aisle == "package vegetables fruits") %>% 
-  mutate(n_ranking = min_rank(desc(n)))
-pivot_wider(
-    names_from = aisle,
-    values_from = product_name
-  ) 
-  
-  mutate(n_ranking = min_rank(desc(n))) 
-  
-  select(aisle, product_name) %>% 
-  pivot_wider(
-    names_from = aisle,
-    values_from = product_name
+  filter(aisle == "baking ingredients" | aisle == "dog food care" | aisle == "packaged vegetables fruits") %>% mutate(n_ranking = min_rank(desc(n))) %>% 
+  filter(n_ranking < 4) %>% 
+   knitr::kable()
+
+```
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+
+
+```{r }
+
+instacart %>%
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
+  mutate(order_day = ordered(order_dow, labels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>% 
+  group_by(product_name, order_day) %>% 
+  summarize(mhour = mean(order_hour_of_day)) %>% 
+  spread(key = order_day, value = mhour) %>% 
+  knitr::kable()
+
+```
+
+
+## Problem 2
+
+
+```{r }
+
+instacart %>%
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
+  mutate(order_day = ordered(order_dow, labels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>% 
+  group_by(product_name, order_day) %>% 
+  summarize(mhour = mean(order_hour_of_day)) %>% 
+  spread(key = order_day, value = mhour) %>% 
+  knitr::kable()
+
+```
+
+
+## Problem 2 
+
+First, do some data cleaning: format the data to use appropriate variable names; focus on the “Overall Health” topic; include only responses from “Excellent” to “Poor”; organize responses as a factor taking levels ordered from “Excellent” to “Poor”.
+
+```{r}
+library(p8105.datasets)
+b_data <- p8105.datasets::brfss_smart2010 %>%
+  janitor::clean_names() %>%
+  rename(state = locationabbr, county = locationdesc) %>%
+  filter(topic == "Overall Health" & (response == "Excellent" | response == "Very good" |  response == "Good" | response == "Fair" | response == "Poor")) %>% 
+  mutate(response = as_factor(response), levels(c("Excellent","Very good", "Good", "Fair", "Poor")))
+          
+
+```
+
+In 2002, which states were observed at 7 or more locations? What about in 2010?
+
+```{r}
+b_data %>% 
+  filter(year == 2002) %>% 
+  group_by(state) %>% 
+  summarize(n_sites = n()) %>% 
+  filter(n_sites >= 7) %>% 
+  knitr::kable()
+
+ 
+b_data %>% 
+  filter(year == 2010) %>% 
+  group_by(state) %>% 
+  summarize(n_sites = n()) %>% 
+  filter(n_sites >= 7) %>% 
+  knitr::kable ()
+
+
+
+
+```
+
+Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. Make a “spaghetti” plot of this average value over time within a state (that is, make a plot showing a line for each state across years – the geom_line geometry and group aesthetic will help).
+
+```{r}
+bnumberlocation_data = b_data %>% 
+  group_by(year, state) %>% 
+  summarize(numberlocation = n_distinct(county)) 
+ggplot(bnumberlocation_data, aes(x = year, y = numberlocation, color = state)) +
+  geom_line() +
+  labs(
+    title = "Location number per state",
+    x = "year",
+    y = "location number"
   )
+  
+```
+
+Make a table showing, for the years 2002, 2006, and 2010, the mean and standard deviation of the proportion of “Excellent” responses across locations in NY State. The table shows stable mean and SD for the proportion of "excellent" responses, with a somewhat higher mean and SD in 2002 than those in 2006, 2010.
+
+```{r}
+b_data %>% 
+  filter(
+    year %in% c(2002, 2006, 2010) & 
+    response == "Excellent" & 
+    state == "NY"
+    ) %>% 
+  group_by(year) %>% 
+  summarize(
+    mexcellent = mean(data_value, na.rm = TRUE), 
+    sexcellent = sd(data_value)
+    ) %>% 
+  knitr::kable(digits = 1)
+```
+
+For each year and state, compute the average proportion in each response category (taking the average across locations in a state). Make a five-panel plot that shows, for each response category separately, the distribution of these state-level averages over time. Very good has the highest proportion. Poor has the lowest proportion. 
+
+```{r}
+bprop_data = b_data %>% 
+  group_by(year, state, response) %>% 
+  summarize(meanvalue = mean(data_value, na.rm = TRUE)) 
+bprop_data %>%
+  ggplot(aes(x = year, y = meanvalue, color = state)) +
+  geom_line() +
+  labs(
+    title = "State-level responses over time",
+    x = "year",
+    y = "average proportion"
+  ) +
+  facet_wrap (~ response)
+```
+
+##Problem 3
+
+Load, tidy, and otherwise wrangle the data. Your final dataset should include all originally observed variables and values; have useful variable names; include a weekday vs weekend variable; and encode data with reasonable variable classes. Describe the resulting dataset (e.g. what variables exist, how many observations, etc).
+
+```{r}
+activity <- read.csv("accel_data.csv") %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(activity_1:activity_1440, 
+               names_prefix = "activity_", 
+               names_to = "minute", 
+               values_to = "omt_activity") %>% 
+  mutate(day_type = if_else(day == "Saturday" | day == "Sunday","weekend", "weekday" ))
+```
+Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate accross minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
+
+```{r}
+ activity %>% 
+  group_by(day_id, day_type) %>% 
+  summarise(sum_day_activity = sum(omt_activity)) %>% 
+  ggplot(aes(x=day_id, y=sum_day_activity, color = day_type)) +
+  geom_point()
+  
+```
+Accelerometer data allows the inspection activity over the course of the day. Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week. Describe in words any patterns or conclusions you can make based on this graph.
+
+
+
+```{r}
+activity %>% 
+  ggplot(aes(x = minute, y = omt_activity, color = day)) + 
+  geom_point()
+
 
 ```
